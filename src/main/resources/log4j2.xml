@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration xmlns="https://logging.apache.org/xml/ns"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="https://logging.apache.org/xml/ns
+                                   https://logging.apache.org/xml/ns/log4j-config-2.xsd"
+               status="WARN">
+
+    <Properties>
+        <Property name="logBaseFileName" value="FileWatcher" />
+        <Property name="logFileExtension" value="log" />
+        <Property name="logFilePath" value="${sys:user.dir:-logs}/logs" /> <!-- заменить на системную переменную среды java -->
+    </Properties>
+
+    <Appenders>
+        <Console name="LogToConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss} [%t] %-5level %logger{36}:%L - %msg%n"/>
+        </Console>
+        <RollingFile name="LogToRollingFile"
+                     fileName="${logFilePath}/${logBaseFileName}.${logFileExtension}"
+                     filePattern="${logFilePath}/${logBaseFileName}-%d{yyyy-MM}-%i.${logFileExtension}">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5level %c{2}:%L - %msg%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="io.github.ckofa" level="DEBUG" additivity="false">
+            <AppenderRef ref="LogToConsole"/>
+            <AppenderRef ref="LogToRollingFile"/>
+        </Logger>
+        <Root level="ERROR" additivity="false">
+            <AppenderRef ref="LogToConsole"/>
+            <AppenderRef ref="LogToRollingFile"/>
+        </Root>
+    </Loggers>
+
+</Configuration>
