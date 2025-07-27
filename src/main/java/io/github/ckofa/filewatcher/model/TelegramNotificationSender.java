@@ -14,58 +14,76 @@ import java.net.Proxy;
 
 /**
  * A utility class for sending notifications to Telegram chats using the Telegram Bot API.
+ * Instances should be created using the provided static factory methods like {@code create(...)}.
  * Supports direct internet access or connection through an HTTP proxy with optional authentication.
- * This class provides a simple interface to send messages to a specified chat using a bot token.
  */
 public final class TelegramNotificationSender {
 
     private final TelegramBot bot;
 
     /**
-     * Constructs a Telegram notification sender for direct internet access.
+     * Private constructor to enforce the use of factory methods.
+     * It takes a fully configured TelegramBot instance.
      *
-     * @param token  the Telegram bot token, must not be null or empty.
-     * @throws IllegalArgumentException if the token is null or empty.
+     * @param bot The configured TelegramBot instance.
      */
-    public TelegramNotificationSender(String token) {
-        validateToken(token);
-        bot = new TelegramBot(token);
+    private TelegramNotificationSender(TelegramBot bot) {
+        this.bot = bot;
     }
 
     /**
-     * Constructs a Telegram notification sender using an HTTP proxy server.
+     * Creates a TelegramNotificationSender for direct internet access.
+     *
+     * @param token the Telegram bot token, must not be null or empty.
+     * @return A new configured instance of TelegramNotificationSender.
+     * @throws IllegalArgumentException if the token is null or empty.
+     */
+    public static TelegramNotificationSender create(String token) {
+        validateToken(token);
+
+        TelegramBot bot = new TelegramBot(token);
+        return new TelegramNotificationSender(bot);
+    }
+
+    /**
+     * Creates a TelegramNotificationSender that connects through an HTTP proxy.
      *
      * @param token        the Telegram bot token, must not be null or empty.
      * @param proxyAddress the proxy server address, must not be null or empty.
      * @param port         the proxy server port, must be between 1 and 65535.
+     * @return A new configured instance of TelegramNotificationSender.
      * @throws IllegalArgumentException if any parameter is invalid.
      */
-    public TelegramNotificationSender(String token, String proxyAddress, int port) {
+    public static TelegramNotificationSender createWithProxy(String token, String proxyAddress, int port) {
         validateToken(token);
         validateProxyConfig(proxyAddress, port);
+
         Proxy proxy = new Proxy(java.net.Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, port));
         OkHttpClient client = new OkHttpClient.Builder()
                 .proxy(proxy)
                 .build();
-        bot = new TelegramBot.Builder(token).okHttpClient(client).build();
+        TelegramBot bot = new TelegramBot.Builder(token).okHttpClient(client).build();
+        return new TelegramNotificationSender(bot);
     }
 
     /**
-     * Constructs a Telegram notification sender using an HTTP proxy server with basic authentication.
+     * Creates a TelegramNotificationSender that connects through an HTTP proxy with authentication.
      *
      * @param token         the Telegram bot token, must not be null or empty.
      * @param proxyAddress  the proxy server address, must not be null or empty.
      * @param port          the proxy server port, must be between 1 and 65535.
      * @param proxyLogin    the login for proxy authentication, must not be null.
      * @param proxyPassword the password for proxy authentication, must not be null.
+     * @return A new configured instance of TelegramNotificationSender.
      * @throws IllegalArgumentException if any parameter is invalid.
      */
-    public TelegramNotificationSender(String token, String proxyAddress, int port, String proxyLogin, String proxyPassword) {
+    public static TelegramNotificationSender createWithAuthenticatedProxy(String token, String proxyAddress, int port, String proxyLogin, String proxyPassword) {
         validateToken(token);
         validateProxyConfig(proxyAddress, port);
         if (proxyLogin == null || proxyPassword == null) {
             throw new IllegalArgumentException("Proxy login and password must not be null");
         }
+
         Proxy proxy = new Proxy(java.net.Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, port));
         Authenticator proxyAuthenticator = (route, response) -> {
             String credential = Credentials.basic(proxyLogin, proxyPassword);
@@ -77,7 +95,8 @@ public final class TelegramNotificationSender {
                 .proxy(proxy)
                 .proxyAuthenticator(proxyAuthenticator)
                 .build();
-        bot = new TelegramBot.Builder(token).okHttpClient(client).build();
+        TelegramBot bot = new TelegramBot.Builder(token).okHttpClient(client).build();
+        return new TelegramNotificationSender(bot);
     }
 
     /**
@@ -151,7 +170,7 @@ public final class TelegramNotificationSender {
      * @param token the Telegram bot token to validate.
      * @throws IllegalArgumentException if the token is null or empty.
      */
-    private void validateToken(String token) {
+    private static void validateToken(String token) {
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("Token must not be null or empty");
         }
@@ -164,7 +183,7 @@ public final class TelegramNotificationSender {
      * @param port         the proxy server port to validate.
      * @throws IllegalArgumentException if any parameter is invalid.
      */
-    private void validateProxyConfig(String proxyAddress, int port) {
+    private static void validateProxyConfig(String proxyAddress, int port) {
         if (proxyAddress == null || proxyAddress.isBlank()) {
             throw new IllegalArgumentException("Proxy address must not be null or empty");
         }
