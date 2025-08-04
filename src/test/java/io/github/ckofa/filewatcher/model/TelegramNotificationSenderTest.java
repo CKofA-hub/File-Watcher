@@ -10,10 +10,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -21,54 +26,52 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TelegramNotificationSenderTest {
 
-    private TelegramNotificationSender sender;
-
     @Nested
     @DisplayName("Testing class constructors")
     class ConstructorsTests {
 
         @Test
-        void constructorWithoutProxy_whenTokenIsValid() {
-            sender = new TelegramNotificationSender("validToken");
+        void createInstance_whenTokenIsValid_shouldReturnInstance() {
+            TelegramNotificationSender sender = TelegramNotificationSender.create("validToken");
             assertNotNull(sender);
         }
 
         @Test
-        void constructorWithoutProxy_whenTokenIsNullOrEmpty_shouldThrowsException() {
+        void createInstance_whenTokenIsNullOrEmpty_shouldThrowException() {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                    () -> new TelegramNotificationSender(null));
-            assertEquals(exception.getMessage(), "Token must not be null or empty");
-            exception = assertThrows(IllegalArgumentException.class, () -> new TelegramNotificationSender(""));
-            assertEquals(exception.getMessage(), "Token must not be null or empty");
+                    () -> TelegramNotificationSender.create(null));
+            assertEquals("Token must not be null or empty", exception.getMessage());
+            exception = assertThrows(IllegalArgumentException.class, () -> TelegramNotificationSender.create(""));
+            assertEquals("Token must not be null or empty", exception.getMessage());
         }
 
         @Test
-        void constructorWithProxy_whenParametersValid() {
-            sender = new TelegramNotificationSender("validToken", "proxyAddress", 8080);
+        void createInstanceWithProxy_whenParametersValid_shouldReturnInstance() {
+            TelegramNotificationSender sender = TelegramNotificationSender.createWithProxy("validToken", "proxyAddress", 8080);
             assertNotNull(sender);
         }
 
         @Test
-        void constructorWithProxy_whenParametersInvalid_shouldThrowsException() {
+        void createInstanceWithProxy_whenParametersInvalid_shouldThrowsException() {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                    () -> new TelegramNotificationSender("validToken", "", 8080));
-            assertEquals(exception.getMessage(), "Proxy address must not be null or empty");
+                    () -> TelegramNotificationSender.createWithProxy("validToken", "", 8080));
+            assertEquals("Proxy address must not be null or empty", exception.getMessage());
             exception = assertThrows(IllegalArgumentException.class,
-                    () -> new TelegramNotificationSender("validToken", "proxyAddress", 80000));
-            assertEquals(exception.getMessage(), "Port must be between 1 and 65535");
+                    () -> TelegramNotificationSender.createWithProxy("validToken", "proxyAddress", 80000));
+            assertEquals("Port must be between 1 and 65535", exception.getMessage());
         }
 
         @Test
-        void constructorWithProxyAuth_whenParametersValid() {
-            sender = new TelegramNotificationSender("validToken", "proxyAddress", 8080, "login", "password");
+        void createInstanceWithProxyAuth_whenParametersValid_shouldReturnInstance() {
+            TelegramNotificationSender sender = TelegramNotificationSender.createWithAuthenticatedProxy("validToken", "proxyAddress", 8080, "login", "password");
             assertNotNull(sender);
         }
 
         @Test
-        void constructorWithProxyAuth_whenLoginAndPasswordNull_shouldThrowsException() {
+        void createInstanceWithProxyAuth_whenLoginAndPasswordNull_shouldThrowException() {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                    () -> new TelegramNotificationSender("validToken", "proxyAddress", 8080, null, null));
-            assertEquals(exception.getMessage(), "Proxy login and password must not be null");
+                    () -> TelegramNotificationSender.createWithAuthenticatedProxy("validToken", "proxyAddress", 8080, null, null));
+            assertEquals("Proxy login and password must not be null", exception.getMessage());
         }
     }
 
@@ -78,79 +81,101 @@ class TelegramNotificationSenderTest {
 
         @Mock
         private TelegramBot bot;
+        @Captor
+        private ArgumentCaptor<SendMessage> messageCaptor;
+        @Captor
+        private ArgumentCaptor<Callback<SendMessage, SendResponse>> callbackCaptor;
+
+        private TelegramNotificationSender sender;
         private final long chatId = 123456L;
         private final String message = "test message";
 
         @BeforeEach
         void setUp() throws NoSuchFieldException, IllegalAccessException {
-            sender = new TelegramNotificationSender("validToken");
+            sender = TelegramNotificationSender.create("validToken");
 
             injectMockTelegramBot(sender);
         }
 
         @Test
-        void sendMessage_whenValidInput(){
+        void sendMessage_whenValidInput_shouldExecuteBot(){
             sender.sendMessage(chatId, message);
 
             //Check that bot.execute was called with the correct parameters
-            ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
-            verify(bot, times(1)).execute(captor.capture());
-            SendMessage value = captor.getValue();
-            assertAll(
-                    () -> assertEquals(chatId, value.getParameters().get("chat_id")),
-                    () -> assertEquals(message, value.getParameters().get("text"))
+            verify(bot, times(1)).execute(messageCaptor.capture());
+            SendMessage sentMessage = messageCaptor.getValue();
+
+            assertAll("Verify message content",
+                    () -> assertEquals(chatId, sentMessage.getParameters().get("chat_id")),
+                    () -> assertEquals(message, sentMessage.getParameters().get("text"))
             );
         }
 
         @Test
         void sendMessage_whenMessageNullOrEmpty_shouldThrowsException() {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> sender.sendMessage(chatId, null));
-            assertEquals(exception.getMessage(), "Message must not be null or empty");
+            assertEquals("Message must not be null or empty", exception.getMessage());
             exception = assertThrows(IllegalArgumentException.class, () -> sender.sendMessage(chatId, ""));
-            assertEquals(exception.getMessage(), "Message must not be null or empty");
+            assertEquals("Message must not be null or empty", exception.getMessage());
         }
 
         @Test
-        void sendMessageAsyncWithCallback_whenValidInput() {
+        void sendMessageAsyncWithCallback_whenValidInput_shouldExecuteBot() {
             Callback<SendMessage, SendResponse> callback = mock(Callback.class);
-
             sender.sendMessageAsync(chatId, message, callback);
 
             //Check that bot.execute was called with the correct parameters
-            ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
             verify(bot, times(1)).execute(messageCaptor.capture(), eq(callback));
-            SendMessage value = messageCaptor.getValue();
-            assertAll(
-                    () -> assertEquals(chatId, value.getParameters().get("chat_id")),
-                    () -> assertEquals(message, value.getParameters().get("text"))
+            SendMessage sentMessage = messageCaptor.getValue();
+
+            assertAll("Verify message content",
+                    () -> assertEquals(chatId, sentMessage.getParameters().get("chat_id")),
+                    () -> assertEquals(message, sentMessage.getParameters().get("text"))
             );
         }
 
         @Test
         void sendMessageAsyncWithCallback_whenNullCallback_shouldThrowsException() {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> sender.sendMessageAsync(chatId, message, null));
-            assertEquals(exception.getMessage(), "Callback must not be null");
+            assertEquals("Callback must not be null", exception.getMessage());
         }
 
         @Test
-        void sendMessageAsyncFireAndForget_whenValidInput() throws NoSuchFieldException, IllegalAccessException {
-            sender.sendMessageAsync(chatId, message);
+        void sendMessageAsync_CompletableFuture_onSuccess() {
+            CompletableFuture<SendResponse> future = sender.sendMessageAsync(chatId, message);
+            
+            verify(bot, times(1)).execute(messageCaptor.capture(), callbackCaptor.capture());
 
-            ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
-            verify(bot, times(1)).execute(messageCaptor.capture(), any(Callback.class));
-            SendMessage value = messageCaptor.getValue();
-            assertAll(
-                    () -> assertEquals(chatId, value.getParameters().get("chat_id")),
-                    () -> assertEquals(message, value.getParameters().get("text"))
+            SendResponse mockResponse = mock(SendResponse.class);
+            callbackCaptor.getValue().onResponse(messageCaptor.getValue(), mockResponse);
+
+            assertTrue(future.isDone(), "Future should be done after onResponse is called");
+            assertFalse(future.isCompletedExceptionally(), "Future should not be completed exceptionally on success");
+            assertSame(mockResponse, future.join(), "The object from future should be the same instance as the mock response");
+
+            SendMessage sentMessage = messageCaptor.getValue();
+            assertAll("Verify message content",
+                    () -> assertEquals(chatId, sentMessage.getParameters().get("chat_id")),
+                    () -> assertEquals(message, sentMessage.getParameters().get("text"))
             );
         }
 
         @Test
-        void sendMessageAsyncFireAndForget_whenMessageNullOrEmpty_shouldThrowsException() {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> sender.sendMessageAsync(chatId, null));
-            assertEquals(exception.getMessage(), "Message must not be null or empty");
-            exception = assertThrows(IllegalArgumentException.class, () -> sender.sendMessageAsync(chatId, ""));
-            assertEquals(exception.getMessage(), "Message must not be null or empty");
+        void sendMessageAsync_CompletableFuture_onFailure() {
+            CompletableFuture<SendResponse> future = sender.sendMessageAsync(chatId, message);
+
+            verify(bot, times(1)).execute(messageCaptor.capture(), callbackCaptor.capture());
+
+            IOException exception = new IOException("Network error");
+            callbackCaptor.getValue().onFailure(messageCaptor.getValue(), exception);
+
+            assertTrue(future.isDone(), "Future should be done even if it failed");
+            assertTrue(future.isCompletedExceptionally(), "Future should be completed exceptionally on failure");
+
+            ExecutionException thrown = assertThrows(ExecutionException.class,
+                    future::get,
+                    "Getting result from a failed future should throw ExecutionException");
+            assertSame(exception, thrown.getCause(), "The cause of the ExecutionException should be our original IOException");
         }
 
         private void injectMockTelegramBot(TelegramNotificationSender sender) throws NoSuchFieldException, IllegalAccessException {

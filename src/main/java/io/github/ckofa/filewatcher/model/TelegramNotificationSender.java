@@ -11,6 +11,7 @@ import okhttp3.OkHttpClient;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A utility class for sending notifications to Telegram chats using the Telegram Bot API.
@@ -109,6 +110,7 @@ public final class TelegramNotificationSender {
      */
     public void sendMessage(long chatId, String message) {
         validateMessage(message);
+
         bot.execute(new SendMessage(chatId, message));
     }
 
@@ -123,6 +125,7 @@ public final class TelegramNotificationSender {
      */
     public void sendMessageAsync(long chatId, String message, Callback<SendMessage, SendResponse> callback) {
         validateMessage(message);
+
         if (callback == null) {
             throw new IllegalArgumentException("Callback must not be null");
         }
@@ -130,26 +133,33 @@ public final class TelegramNotificationSender {
     }
 
     /**
-     * Asynchronously sends a message to a specified Telegram chat without waiting for or handling the result.
-     * This is a "fire-and-forget" operation, meaning no feedback is provided on success or failure.
+     * Asynchronously sends a message to a specified Telegram chat.
+     * This method returns a CompletableFuture that will be completed with the SendResponse
+     * on success, or completed exceptionally on failure.
      *
      * @param chatId  the ID of the Telegram chat to send the message to.
      * @param message the text message to send, must not be null or empty.
+     * @return A CompletableFuture representing the pending result of the send operation.
      * @throws IllegalArgumentException if the message is null or empty.
      */
-    public void sendMessageAsync(long chatId, String message) {
+    public CompletableFuture<SendResponse> sendMessageAsync(long chatId, String message) {
         validateMessage(message);
+
+        CompletableFuture<SendResponse> future = new CompletableFuture<>();
+
         bot.execute(new SendMessage(chatId, message), new Callback<SendMessage, SendResponse>() {
             @Override
             public void onResponse(SendMessage sendMessage, SendResponse sendResponse) {
-                //Ignoring success
+                future.complete(sendResponse);
             }
 
             @Override
             public void onFailure(SendMessage sendMessage, IOException e) {
-                System.err.println("Failed to send message to chat " + chatId + ": " + e.getMessage());
+                future.completeExceptionally(e);
             }
         });
+
+        return future;
     }
 
     /**
