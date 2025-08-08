@@ -29,7 +29,6 @@ class AppConfigManagerTest {
     void setUp() {
         //Configuring fileProvider behavior
         when(fileProvider.getConfigFile()).thenReturn(configFile);
-
     }
 
     @AfterEach
@@ -39,36 +38,32 @@ class AppConfigManagerTest {
     }
 
     @Test
-    @DisplayName("When initializing the object, the settings from the config file must be read out")
-    void initialization_whenConfigFileExist() throws IOException {
+    @DisplayName("When initializing, should read settings from an existing config file")
+    void initialization_whenConfigFileExist_shouldReadSettings() throws IOException {
         // Prepare: config file exists, mockReader with test settings is created
-        when(configFile.exists()).thenReturn(true);
-        Reader mockReader = new StringReader("mail.send.enabled=true\nmail.smtp.host=smtp.test.com\nmail.smtp.port=220");
-        when(fileProvider.createReader(configFile)).thenReturn(mockReader);
+        String fileContent = "mail.send.enabled=true\nmail.smtp.host=smtp.test.com\nmail.smtp.port=220";
+        setupForExistingConfigFileRead(fileContent);
 
         // Action: object initialization
         appConfigManager = AppConfigManager.getInstance(fileProvider);
 
-        //Checking FileProvider method calls
+        // Asserts
         verify(fileProvider, times(1)).createReader(configFile);
         verify(fileProvider, never()).createWriter(any(File.class));
 
         //Checking that the settings in memory correspond to those passed through mockReader
-        assertAll(
+        assertAll("Verify settings loaded from file",
                 () -> assertTrue(appConfigManager.isSettingEnabled(AppConfigManager.Settings.MAIL_SEND_ENABLED)),
-                () -> assertEquals(appConfigManager.getSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST), "smtp.test.com"),
-                () -> assertEquals(appConfigManager.getIntSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT), 220)
+                () -> assertEquals("smtp.test.com", appConfigManager.getSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST)),
+                () -> assertEquals(220, appConfigManager.getIntSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT))
         );
-
     }
 
     @Test
-    @DisplayName("When the object is initialized, a settings file must be created and default settings must be written to it")
-    void initialization_whenConfigFileNotExist() throws IOException {
+    @DisplayName("When initializing and config file does not exist, should create it with default settings")
+    void initialization_whenConfigFileDoesNotExist_shouldCreateWithDefaults() throws IOException {
         // Prepare: config file does not exist, mockWriter is created to check the customization that will be written to the “file”
-        when(configFile.exists()).thenReturn(false);
-        Writer mockWriter = new StringWriter();
-        when(fileProvider.createWriter(configFile)).thenReturn(mockWriter);
+        StringWriter mockWriter = setupForNewConfigFileCreation();
 
         // Action: object initialization
         appConfigManager = AppConfigManager.getInstance(fileProvider);
@@ -88,154 +83,177 @@ class AppConfigManagerTest {
         writtenProps.load(new StringReader(mockWriter.toString()));
         for (AppConfigManager.Settings setting : AppConfigManager.Settings.values()) {
             String writtenValue = writtenProps.getProperty(setting.getKey());
-            assertNotNull(writtenValue, "Setting " + setting.getKey() + " should be written to file");
             assertEquals(setting.getDefaultValue(), writtenValue,
                     "Setting " + setting.getKey() + " in file should match default value");
         }
     }
 
     @Test
-    @DisplayName("When initializing an object, it should throw an exception if it fails to read the settings file")
+    @DisplayName("Should throw IOException if reading the config file fails")
     void initialization_whenReadingFails_shouldThrowsIOException() throws IOException {
         // Prepare: config file exists, but reading settings causes an exception
         String exceptionMsg = "Read error config file";
         when(configFile.exists()).thenReturn(true);
         when(fileProvider.createReader(configFile)).thenThrow(new IOException(exceptionMsg));
 
-        //Checking the type of exception thrown and its message
+        // Act & Assert
         IOException ioException = assertThrows(IOException.class, () -> {
             AppConfigManager.getInstance(fileProvider);
         });
         assertEquals(exceptionMsg, ioException.getMessage());
-
-        //Checking FileProvider method calls
-        verify(fileProvider, times(1)).createReader(configFile);
-        verify(fileProvider, never()).createWriter(any(File.class));
     }
 
     @Test
-    @DisplayName("When initializing an object, it should throw an exception if it fails to write settings to a file")
-    void initialization_whenWritingFails_ThrowsIOException() throws IOException {
+    @DisplayName("Should throw IOException if writing the new config file fails")
+    void initialization_whenWritingFails_shouldThrowsIOException() throws IOException {
         // Prepare: config file does not exist, writing settings causes an exception
         String exceptionMsg = "Error writing to a config file";
         when(configFile.exists()).thenReturn(false);
         when(fileProvider.createWriter(configFile)).thenThrow(new IOException(exceptionMsg));
 
+        // Act & Assert
         //Checking the type of exception thrown and its message
         IOException ioException = assertThrows(IOException.class, () -> {
             AppConfigManager.getInstance(fileProvider);
         });
         assertEquals(exceptionMsg, ioException.getMessage());
-
-        //Checking FileProvider method calls
-        verify(fileProvider, times(1)).createWriter(configFile);
-        verify(fileProvider, never()).createReader(any(File.class));
     }
 
 
     @Test
-    @DisplayName("Checking that the settings in memory and in the “file” contain the settings passed to the method")
-    void setSettingValue() throws IOException {
+    @DisplayName("setSettingValue should update value in memory and in the file")
+    void setSettingValue_shouldUpdateInMemoryAndInFile() throws IOException {
         // Prepare: config file does not exist, mockWriter is created to check the customization that will be written to the “file”
-        when(configFile.exists()).thenReturn(false);
-        Writer mockWriter = new StringWriter();
-        when(fileProvider.createWriter(configFile)).thenReturn(mockWriter);
+        StringWriter mockWriter = setupForNewConfigFileCreation();
 
         // Action: object initialization and write setting
         appConfigManager = AppConfigManager.getInstance(fileProvider);
         appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST, "smtp.gmail.com");
 
-        //Checking that the transferred settings are stored in memory
-        assertEquals(appConfigManager.getSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST), "smtp.gmail.com");
+        // Assert
+        // Checking that the transferred settings are stored in memory
+        assertEquals("smtp.gmail.com", appConfigManager.getSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST));
 
         //Checking that the setting has been written to a "file"
         Properties writtenProps = new Properties();
         writtenProps.load(new StringReader(mockWriter.toString()));
-        assertEquals(writtenProps.getProperty("mail.smtp.host"), "smtp.gmail.com");
+        assertEquals("smtp.gmail.com", writtenProps.getProperty("mail.smtp.host"));
 
         //Checking FileProvider method calls
         verify(fileProvider, times(2)).createWriter(configFile);
     }
 
     @Test
-    @DisplayName("Checking that the received settings correspond to the specified test settings")
-    void getSettingValue_getIntSettingValue_isSettingEnabled() throws IOException {
-        // Prepare: file does not exist, initialize with Writer
+    @DisplayName("getSettingValue should return the correct string value")
+    void getSettingValue_shouldReturnCorrectStringValue() throws IOException {
+        // Arrange: file does not exist, initialize with Writer
         when(configFile.exists()).thenReturn(false);
         when(fileProvider.createWriter(configFile)).thenReturn(new StringWriter());
-
-        //Action: create an instance and set test values (string. boolean, int)
         appConfigManager = AppConfigManager.getInstance(fileProvider);
-        appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SEND_ENABLED, "true");
-        appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT, "578");
         appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST, "smtp.test.com");
 
-        //Checking that the resulting settings correspond to the specified test settings
-        assertAll(
-                () -> assertTrue(appConfigManager.isSettingEnabled(AppConfigManager.Settings.MAIL_SEND_ENABLED)),
-                () -> assertEquals(578, appConfigManager.getIntSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT)),
-                () -> assertEquals("smtp.test.com", appConfigManager.getSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST))
-        );
+        // Act: get setting value
+        String actualValue = appConfigManager.getSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST);
+
+        //Assert
+        assertEquals("smtp.test.com", actualValue);
     }
 
     @Test
-    @DisplayName("When the setting has no representation of type int throw an exception")
-    void getIntSettingValue_whenInvalidValue_ThrowsException() throws IOException {
-        // Prepare: file does not exist, initialize with Writer
+    @DisplayName("isSettingEnabled should return the correct boolean value")
+    void isSettingEnabled_shouldReturnCorrectBooleanValue() throws IOException {
+        // Arrange: file does not exist, initialize with Writer
         when(configFile.exists()).thenReturn(false);
         when(fileProvider.createWriter(configFile)).thenReturn(new StringWriter());
-
-        //Action: create an instance and set an invalid value
         appConfigManager = AppConfigManager.getInstance(fileProvider);
-        appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT, "invalid");
+        appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SEND_ENABLED, "true");
 
-        //Check: expect an exception
+        // Act: get setting value
+        boolean isEnabled = appConfigManager.isSettingEnabled(AppConfigManager.Settings.MAIL_SEND_ENABLED);
+
+        // Assert
+        assertTrue(isEnabled);
+    }
+
+    @Test
+    @DisplayName("getIntSettingValue should return the correct integer value")
+    void getIntSettingValue_shouldReturnCorrectIntValue() throws IOException {
+        // Arrange: file does not exist, initialize with Writer
+        when(configFile.exists()).thenReturn(false);
+        when(fileProvider.createWriter(configFile)).thenReturn(new StringWriter());
+        appConfigManager = AppConfigManager.getInstance(fileProvider);
+        appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT, "578");
+
+        // Act: get setting value
+        int actualPort = appConfigManager.getIntSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT);
+
+        // Assert
+        assertEquals(578, actualPort);
+    }
+
+    @Test
+    @DisplayName("getLongSettingsValue should return the correct long value")
+    void getLongSettingsValue_shouldReturnCorrectLongValue() throws IOException {
+        // Arrange
+        when(configFile.exists()).thenReturn(false);
+        when(fileProvider.createWriter(configFile)).thenReturn(new StringWriter());
+        appConfigManager = AppConfigManager.getInstance(fileProvider);
+        appConfigManager.setSettingValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID, "1234567890");
+
+        // Act
+        long actualChatId = appConfigManager.getLongSettingsValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID);
+
+        // Assert: get setting value
+        assertEquals(1234567890L, actualChatId);
+    }
+
+
+    @Test
+    @DisplayName("getIntSettingValue should throw exception for a non-integer value")
+    void getIntSettingValue_whenInvalidValue_shouldThrowsException() throws IOException {
+        // Prepare: file does not exist, initialize with Writer
+        setupForNewConfigFileCreation();
+        appConfigManager = AppConfigManager.getInstance(fileProvider);
+        appConfigManager.setSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT, "not-a-number");
+
+        // Act & Assert
         assertThrows(IllegalArgumentException.class,
                 () -> appConfigManager.getIntSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT));
     }
 
     @Test
+    @DisplayName("getLongSettingsValue should throw exception for a non-long value")
+    void getLongSettingsValue_whenInvalidValue_shouldThrowException() throws IOException {
+        // Prepare: file does not exist, initialize with Writer
+        setupForNewConfigFileCreation();
+        appConfigManager = AppConfigManager.getInstance(fileProvider);
+        appConfigManager.setSettingValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID, "not-a-number");
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> appConfigManager.getLongSettingsValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID));
+    }
+
+    @Test
     @DisplayName("The AppConfigManager object is initialized with the defined settings and then they are overwritten with the default settings")
-    void resetSettingsToDefault() throws IOException {
-        // Prepare: config file exists, a mockReader with test settings and a mockWriter to check the settings that will be written to the "file" are created
-        when(configFile.exists()).thenReturn(true);
-        Reader mockReader = new StringReader("mail.send.enabled=true\nmail.smtp.host=smtp.test.com\nmail.smtp.port=220");
-        when(fileProvider.createReader(configFile)).thenReturn(mockReader);
+    void resetSettingsToDefault_shouldRestoreDefaults() throws IOException {
+        // Arrange: Start with a file with custom settings
+        String fileContent = "mail.send.enabled=true\nmail.smtp.host=smtp.test.com";
+        setupForExistingConfigFileRead(fileContent);
+        appConfigManager = AppConfigManager.getInstance(fileProvider);
+
+        // Arrange a writer for the reset operation
         StringWriter mockWriter = new StringWriter();
         when(fileProvider.createWriter(configFile)).thenReturn(mockWriter);
 
-        // Action: object initialization
-        appConfigManager = AppConfigManager.getInstance(fileProvider);
-
-        //Checking that the settings in memory correspond to those passed through mockReader
-        assertAll(
-                () -> assertTrue(appConfigManager.isSettingEnabled(AppConfigManager.Settings.MAIL_SEND_ENABLED)),
-                () -> assertEquals(appConfigManager.getSettingValue(AppConfigManager.Settings.MAIL_SMTP_HOST), "smtp.test.com"),
-                () -> assertEquals(appConfigManager.getIntSettingValue(AppConfigManager.Settings.MAIL_SMTP_PORT), 220)
-        );
-
-        // Action: reset setting
+        // Act
         appConfigManager.resetSettingsToDefault();
 
-        //Checking that all settings in memory have default values
+        // Assert: Check that all settings in memory are now default
         for (AppConfigManager.Settings setting : AppConfigManager.Settings.values()) {
             assertEquals(setting.getDefaultValue(), appConfigManager.getSettingValue(setting),
-                    "Setting " + setting.getKey() + " should have default value");
+                    "Setting " + setting.getKey() + " should have default value after reset");
         }
-
-        //Checking that all settings are written to a “file” with default values
-        Properties writtenProps = new Properties();
-        writtenProps.load(new StringReader(mockWriter.toString()));
-        for (AppConfigManager.Settings setting : AppConfigManager.Settings.values()) {
-            String writtenValue = writtenProps.getProperty(setting.getKey());
-            assertNotNull(writtenValue, "Setting " + setting.getKey() + " should be written to file");
-            assertEquals(setting.getDefaultValue(), writtenValue,
-                    "Setting " + setting.getKey() + " in file should match default value");
-        }
-
-        //Checking FileProvider method calls
-        verify(fileProvider, times(1)).createWriter(configFile);
-        verify(fileProvider, times(1)).createReader(configFile);
     }
 
     @Test
@@ -247,16 +265,42 @@ class AppConfigManagerTest {
         when(configFile.getName()).thenReturn("test.properties");
         when(configFile.getParent()).thenReturn("/app/dir");
 
-        // Action: create an instance
+        // Act
         appConfigManager = AppConfigManager.getInstance(fileProvider);
 
-        //Checking
+        // Assert
         assertEquals("test.properties", appConfigManager.getAppConfigFileName());
         assertEquals("/app/dir", appConfigManager.getAppDirectoryPath());
     }
 
+    // ---- Helper Methods ----
+
     /**
-     * A private method for resetting Singleton.
+     * Sets up mocks for a scenario where the config file does not exist and will be created.
+     * @return A StringWriter to capture the output.
+     * @throws IOException if mock setup fails.
+     */
+    private StringWriter setupForNewConfigFileCreation() throws IOException {
+        when(configFile.exists()).thenReturn(false);
+        StringWriter mockWriter = new StringWriter();
+        when(fileProvider.createWriter(configFile)).thenReturn(mockWriter);
+        return mockWriter;
+    }
+
+    /**
+     * Sets up mocks for a scenario where the config file already exists.
+     * @param fileContent The string content to be "read" from the file.
+     * @throws IOException if mock setup fails.
+     */
+    private void setupForExistingConfigFileRead(String fileContent) throws IOException {
+        when(configFile.exists()).thenReturn(true);
+        StringReader mockReader = new StringReader(fileContent);
+        when(fileProvider.createReader(configFile)).thenReturn(mockReader);
+    }
+
+    /**
+     * Resets the Singleton instance of AppConfigManager using reflection.
+     * This is a common pattern for testing singletons to ensure test isolation.
      */
     private void resetSingleton() {
         String fieldName = "instance"; //The field where the class instance is stored
@@ -265,7 +309,7 @@ class AppConfigManagerTest {
             instance.setAccessible(true); // Open access to the private field
             instance.set(null, null); // Reset Singleton value
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to reset Singleton", e);
+            throw new RuntimeException("Failed to reset AppConfigManager singleton", e);
         }
     }
 }

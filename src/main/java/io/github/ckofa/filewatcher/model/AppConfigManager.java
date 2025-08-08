@@ -188,8 +188,8 @@ public final class AppConfigManager {
      * Returns the value of the setting.
      * If the setting is not in the file, the default value from {@link Settings} is returned.
      *
-     * @param setting   setting name.
-     * @return setting  value.
+     * @param setting   The setting to retrieve.
+     * @return setting  The setting value as a {@code String}
      */
     public String getSettingValue(Settings setting) {
         String value = properties.getOrDefault(setting.getKey(), setting.getDefaultValue());
@@ -202,24 +202,40 @@ public final class AppConfigManager {
     /**
      * Returns the setting value in integer format.
      *
-     * @param setting   setting name.
-     * @return setting  value.
-     * @throws IllegalArgumentException if the setting value has no representation in integer.
+     * @param setting   The setting to retrieve.
+     * @return setting  The setting value as a {@code int}
+     * @throws IllegalArgumentException if the setting's value cannot be parsed as an integer.
      */
     public int getIntSettingValue(Settings setting) {
         String value = properties.getOrDefault(setting.getKey(), setting.getDefaultValue());
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Setting '" + setting.getKey() + "' cannot be converted to an integer: " + value, e);
+            throw new IllegalArgumentException("Setting '" + setting.getKey() + "' with value '" + value + "' cannot be converted to an integer: ", e);
+        }
+    }
+
+    /**
+     * Returns the setting value in long format.
+     *
+     * @param setting   The setting to retrieve.
+     * @return setting  The setting value as a {@code long}
+     * @throws IllegalArgumentException if the setting's value cannot be parsed as a long.
+     */
+    public long getLongSettingsValue(Settings setting) {
+        String value = properties.getOrDefault(setting.getKey(), setting.getDefaultValue());
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Setting '" + setting.getKey() + "' with value '" + value + "' cannot be converted to a long.", e);
         }
     }
 
     /**
      * Returns the setting value in boolean format.
      *
-     * @param setting   setting name.
-     * @return setting  value.
+     * @param setting   The setting to retrieve.
+     * @return setting  The setting value as a {@code boolean}
      */
     public boolean isSettingEnabled(Settings setting) {
         String value = properties.getOrDefault(setting.getKey(), setting.getDefaultValue());
