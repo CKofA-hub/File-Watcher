@@ -201,7 +201,7 @@ class AppConfigManagerTest {
         appConfigManager.setSettingValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID, "1234567890");
 
         // Act
-        long actualChatId = appConfigManager.getLongSettingsValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID);
+        long actualChatId = appConfigManager.getLongSettingValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID);
 
         // Assert: get setting value
         assertEquals(1234567890L, actualChatId);
@@ -223,7 +223,7 @@ class AppConfigManagerTest {
 
     @Test
     @DisplayName("getLongSettingsValue should throw exception for a non-long value")
-    void getLongSettingsValue_whenInvalidValue_shouldThrowException() throws IOException {
+    void getLongSettingValue_whenInvalidValue_shouldThrowException() throws IOException {
         // Prepare: file does not exist, initialize with Writer
         setupForNewConfigFileCreation();
         appConfigManager = AppConfigManager.getInstance(fileProvider);
@@ -231,7 +231,7 @@ class AppConfigManagerTest {
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class,
-                () -> appConfigManager.getLongSettingsValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID));
+                () -> appConfigManager.getLongSettingValue(AppConfigManager.Settings.TELEGRAM_CHAT_ID));
     }
 
     @Test

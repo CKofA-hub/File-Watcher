@@ -1,6 +1,5 @@
 package io.github.ckofa.filewatcher.model;
 
-import com.pengrad.telegrambot.response.BaseResponse;
 import com.pengrad.telegrambot.response.SendResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +10,6 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import io.github.ckofa.filewatcher.model.AppConfigManager.Settings;
@@ -51,7 +49,7 @@ class TelegramSenderAdapterTest {
     @DisplayName("Should successfully send the message if the configuration is correct")
     void sendMessage_whenConfigValid_shouldSuccess() {
         // Arrange
-        when(mockAppConfigManager.getLongSettingsValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
+        when(mockAppConfigManager.getLongSettingValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
         mockedFactory.when(() -> TelegramNotificationSenderFactory.create(mockAppConfigManager))
                 .thenReturn(Optional.of(mockSender));
 
@@ -72,7 +70,7 @@ class TelegramSenderAdapterTest {
     @DisplayName("Should not send message when sender cannot be created")
     void sendMessage_whenSenderNotCreated_shouldNotSendMessage() {
         // Arrange
-        when(mockAppConfigManager.getLongSettingsValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
+        when(mockAppConfigManager.getLongSettingValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
         mockedFactory.when(() -> TelegramNotificationSenderFactory.create(mockAppConfigManager))
                 .thenReturn(Optional.empty());
 
@@ -90,14 +88,14 @@ class TelegramSenderAdapterTest {
         // Arrange
         mockedFactory.when(() -> TelegramNotificationSenderFactory.create(mockAppConfigManager))
                 .thenReturn(Optional.of(mockSender));
-        when(mockAppConfigManager.getLongSettingsValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(null);
+        when(mockAppConfigManager.getLongSettingValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(null);
 
         // Act
         TelegramSenderAdapter adapter = new TelegramSenderAdapter(mockAppConfigManager);
         adapter.sendMessage(TEST_MESSAGE);
 
         // Assert
-        verify(mockAppConfigManager).getLongSettingsValue(Settings.TELEGRAM_CHAT_ID);
+        verify(mockAppConfigManager).getLongSettingValue(Settings.TELEGRAM_CHAT_ID);
         verify(mockSender, never()).sendMessageAsync(anyLong(), anyString());
     }
 
@@ -105,7 +103,7 @@ class TelegramSenderAdapterTest {
     @DisplayName("Should log error when Telegram API returns an error response")
     void sendMessage_whenApiReturnsError_shouldHandleError() {
         // Arrange
-        when(mockAppConfigManager.getLongSettingsValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
+        when(mockAppConfigManager.getLongSettingValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
         mockedFactory.when(() -> TelegramNotificationSenderFactory.create(mockAppConfigManager))
                 .thenReturn(Optional.of(mockSender));
 
@@ -131,7 +129,7 @@ class TelegramSenderAdapterTest {
     @DisplayName("Should log error when sending fails with an exception")
     void sendMessage_whenFutureCompletesExceptionally_shouldHandleError() {
         // Arrange
-        when(mockAppConfigManager.getLongSettingsValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
+        when(mockAppConfigManager.getLongSettingValue(Settings.TELEGRAM_CHAT_ID)).thenReturn(VALID_CHAT_ID);
         mockedFactory.when(() -> TelegramNotificationSenderFactory.create(mockAppConfigManager))
                 .thenReturn(Optional.of(mockSender));
 

@@ -25,7 +25,7 @@ public class TelegramSenderAdapter implements MessageSender{
         this.sender = TelegramNotificationSenderFactory.create(appConfigManager);
         OptionalLong chatIdValue;
         try {
-            chatIdValue = OptionalLong.of(appConfigManager.getLongSettingsValue(Settings.TELEGRAM_CHAT_ID));
+            chatIdValue = OptionalLong.of(appConfigManager.getLongSettingValue(Settings.TELEGRAM_CHAT_ID));
         } catch (IllegalArgumentException e) {
             log.error("Invalid Telegram Chat ID in configuration. Telegram notifications will be disabled.", e);
             chatIdValue = OptionalLong.empty();

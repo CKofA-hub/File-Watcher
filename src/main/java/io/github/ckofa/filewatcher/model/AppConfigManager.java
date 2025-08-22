@@ -44,6 +44,7 @@ public final class AppConfigManager {
         MAIL_RECIPIENT_EMAIL("mail.recipient.email", ""), //recipient's email address
         MAIL_SENDER_EMAIL("mail.sender.email", ""), //sender's email address
         MAIL_SENDER_PASSWORD("mail.sender.password", ""), //sender's email password
+        MAIL_CORPORATE_ENABLE("mail.corporate.enable", "false"), // for corporate email, when login doesn't contain a domain name
 
         //Telegram settings
         TELEGRAM_SEND_ENABLED("telegram.send.enabled", "false"), //send a message to telegram
@@ -222,7 +223,7 @@ public final class AppConfigManager {
      * @return setting  The setting value as a {@code long}
      * @throws IllegalArgumentException if the setting's value cannot be parsed as a long.
      */
-    public long getLongSettingsValue(Settings setting) {
+    public long getLongSettingValue(Settings setting) {
         String value = properties.getOrDefault(setting.getKey(), setting.getDefaultValue());
         try {
             return Long.parseLong(value);
