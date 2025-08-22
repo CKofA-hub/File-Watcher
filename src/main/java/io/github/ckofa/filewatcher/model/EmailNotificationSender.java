@@ -76,7 +76,8 @@ public final class EmailNotificationSender {
      * @return A configured instance of EmailNotificationSender.
      * @throws IllegalArgumentException if sender email or password is invalid.
      */
-    public static EmailNotificationSender createPublicEmailNotificationSender(String sendersEmail, String sendersPassword, String mailSmtpHost, int smtpPort) {
+    public static EmailNotificationSender createPublicEmailNotificationSender(
+            String sendersEmail, String sendersPassword, String mailSmtpHost, int smtpPort) {
         validateEmailAuthentication(sendersEmail,sendersPassword);
         return new EmailNotificationSender(sendersEmail, sendersEmail, sendersPassword, mailSmtpHost, smtpPort, true);
     }
@@ -92,7 +93,8 @@ public final class EmailNotificationSender {
      * @return A configured instance of EmailNotificationSender.
      * @throws IllegalArgumentException if sender email or password is invalid.
      */
-    public static EmailNotificationSender createCorporateEmailNotificationSender(String sendersEmail, String sendersPassword, String mailSmtpHost, int smtpPort) {
+    public static EmailNotificationSender createCorporateEmailNotificationSender(
+            String sendersEmail, String sendersPassword, String mailSmtpHost, int smtpPort) {
         validateEmailAuthentication(sendersEmail,sendersPassword);
         String sendersName = sendersEmail.split("@")[0]; //Getting the sender name (only login is used for authorization without specifying the domain)
         return new EmailNotificationSender(sendersEmail, sendersName, sendersPassword, mailSmtpHost, smtpPort, false);

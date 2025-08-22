@@ -1,13 +1,18 @@
 package io.github.ckofa.filewatcher.model;
 
 import io.github.ckofa.filewatcher.model.AppConfigManager.Settings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Optional;
 
 /**
  * A factory for creating configured instances of {@link TelegramNotificationSender}
  * based on the application settings from an {@link AppConfigManager}.
  */
-public class TelegramNotificationSenderFactory {
+public final class TelegramNotificationSenderFactory {
+
+    private static final Logger log = LoggerFactory.getLogger(TelegramNotificationSenderFactory.class);
 
     /**
      * Private constructor to prevent instantiation of this utility class.
@@ -28,26 +33,27 @@ public class TelegramNotificationSenderFactory {
         if (!config.isSettingEnabled(Settings.TELEGRAM_SEND_ENABLED)) {
             return Optional.empty();
         }
+        try {
+            String token = config.getSettingValue(Settings.TELEGRAM_BOT_TOKEN);
+            TelegramNotificationSender sender;
 
-        String token = config.getSettingValue(Settings.TELEGRAM_BOT_TOKEN);
-        if (token == null || token.isBlank()) {
-            return Optional.empty();
-        }
-
-        if (config.isSettingEnabled(Settings.PROXY_ENABLED)) {
-            String proxyHost = config.getSettingValue(Settings.PROXY_HOST);
-            int proxyPort = config.getIntSettingValue(Settings.PROXY_PORT);
-
-            if (config.isSettingEnabled(Settings.PROXY_AUTH_ENABLED)) {
-                String proxyUser = config.getSettingValue(Settings.PROXY_USERNAME);
-                String proxyPassword = config.getSettingValue(Settings.PROXY_PASSWORD);
-                return Optional.of(
-                        TelegramNotificationSender.createWithAuthenticatedProxy(token, proxyHost, proxyPort, proxyUser, proxyPassword));
+            if (config.isSettingEnabled(Settings.PROXY_ENABLED)) {
+                String proxyHost = config.getSettingValue(Settings.PROXY_HOST);
+                int proxyPort = config.getIntSettingValue(Settings.PROXY_PORT);
+                if (config.isSettingEnabled(Settings.PROXY_AUTH_ENABLED)) {
+                    String proxyUser = config.getSettingValue(Settings.PROXY_USERNAME);
+                    String proxyPassword = config.getSettingValue(Settings.PROXY_PASSWORD);
+                    sender = TelegramNotificationSender.createWithAuthenticatedProxy(token, proxyHost, proxyPort, proxyUser, proxyPassword);
+                } else {
+                    sender = TelegramNotificationSender.createWithProxy(token, proxyHost, proxyPort);
+                }
             } else {
-                return Optional.of(TelegramNotificationSender.createWithProxy(token, proxyHost, proxyPort));
+                sender = TelegramNotificationSender.create(token);
             }
-        } else {
-            return Optional.of(TelegramNotificationSender.create(token));
+            return Optional.of(sender);
+        } catch (Exception e) {
+            log.error("Failed to create TelegramNotificationSender due to a configuration error.", e);
+            return Optional.empty();
         }
     }
 }

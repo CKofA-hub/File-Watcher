@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
  * Creates a File object in the application directory with the given name and provides access to it.
  */
 public class RealFileProvider implements FileProvider {
+
     private final File file;
 
     /**
