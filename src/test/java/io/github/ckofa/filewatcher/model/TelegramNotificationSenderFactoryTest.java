@@ -6,6 +6,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Optional;
 
 import static io.github.ckofa.filewatcher.model.AppConfigManager.Settings;
@@ -96,5 +98,25 @@ class TelegramNotificationSenderFactoryTest {
 
         // Assert
         assertTrue(senderOptional.isPresent(), "Should return a sender instance for authenticated proxy");
+    }
+
+    @Test
+    @DisplayName("Constructor should throw UnsupportedOperationException")
+    void constructor_shouldThrowException() throws NoSuchMethodException {
+        // Arrange
+        Constructor<TelegramNotificationSenderFactory> constructor = TelegramNotificationSenderFactory.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+
+        // Act & Assert
+        InvocationTargetException thrown = assertThrows(
+                InvocationTargetException.class,
+                constructor::newInstance,
+                "Constructor should throw an exception"
+        );
+        assertInstanceOf(
+                UnsupportedOperationException.class,
+                thrown.getCause(),
+                "The cause should be UnsupportedOperationException"
+        );
     }
 }

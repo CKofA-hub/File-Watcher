@@ -6,6 +6,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class CipherUtilTest {
@@ -58,5 +61,25 @@ class CipherUtilTest {
         String encodedStr = CipherUtil.encode(str, shift);
         String decodedStr = CipherUtil.decode(encodedStr, shift);
         assertEquals(str, decodedStr);
+    }
+
+    @Test
+    @DisplayName("Constructor should throw UnsupportedOperationException")
+    void constructor_shouldThrowException() throws NoSuchMethodException {
+        // Arrange
+        Constructor<CipherUtil> constructor = CipherUtil.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+
+        // Act & Assert
+        InvocationTargetException thrown = assertThrows(
+                InvocationTargetException.class,
+                constructor::newInstance,
+                "Constructor should throw an exception"
+        );
+        assertInstanceOf(
+                UnsupportedOperationException.class,
+                thrown.getCause(),
+                "The cause should be UnsupportedOperationException"
+        );
     }
 }

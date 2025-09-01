@@ -45,6 +45,7 @@ public final class AppConfigManager {
         MAIL_SENDER_EMAIL("mail.sender.email", ""), //sender's email address
         MAIL_SENDER_PASSWORD("mail.sender.password", ""), //sender's email password
         MAIL_CORPORATE_ENABLE("mail.corporate.enable", "false"), // for corporate email, when login doesn't contain a domain name
+        MAIL_SUBJECT("mail.subject", "Message from File-Watcher"), // subject line of an email
 
         //Telegram settings
         TELEGRAM_SEND_ENABLED("telegram.send.enabled", "false"), //send a message to telegram
