@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 public class TelegramSenderAdapter implements MessageSender{
 
     private static final Logger log = LoggerFactory.getLogger(TelegramSenderAdapter.class);
+    private final MessagePrefixProvider messagePrefixProvider;
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private final Optional<TelegramNotificationSender> sender;
@@ -21,7 +22,7 @@ public class TelegramSenderAdapter implements MessageSender{
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private final OptionalLong chatId;
 
-    public TelegramSenderAdapter(AppConfigManager appConfigManager) {
+    public TelegramSenderAdapter(AppConfigManager appConfigManager, MessagePrefixProvider messagePrefixProvider) {
         this.sender = TelegramNotificationSenderFactory.create(appConfigManager);
         OptionalLong chatIdValue;
         try {
@@ -31,6 +32,7 @@ public class TelegramSenderAdapter implements MessageSender{
             chatIdValue = OptionalLong.empty();
         }
         this.chatId = chatIdValue;
+        this.messagePrefixProvider = messagePrefixProvider;
     }
 
     /**
@@ -41,9 +43,11 @@ public class TelegramSenderAdapter implements MessageSender{
      */
     @Override
     public void sendMessage(String msg) {
+        String fullMessage = messagePrefixProvider.getMessagePrefix() + msg;
+
         chatId.ifPresentOrElse(
                 //Action if chatId EXISTS
-                chatId -> sender.ifPresent(sender -> sender.sendMessageAsync(chatId, msg)
+                chatId -> sender.ifPresent(sender -> sender.sendMessageAsync(chatId, fullMessage)
                         .whenComplete((response, throwable) -> {
                             if (throwable != null) {
                                 log.error("Failed to send Telegram message.", throwable);

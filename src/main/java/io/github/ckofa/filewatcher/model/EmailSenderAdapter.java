@@ -22,6 +22,7 @@ public class EmailSenderAdapter implements MessageSender{
 
     private final String subject;
     private final String recipientMail;
+    private final MessagePrefixProvider messagePrefixProvider;
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private final Optional<EmailNotificationSender> sender;
@@ -35,10 +36,11 @@ public class EmailSenderAdapter implements MessageSender{
      *
      * @param appConfigManager the configuration manager to retrieve email settings from.
      */
-    public EmailSenderAdapter(AppConfigManager appConfigManager) {
+    public EmailSenderAdapter(AppConfigManager appConfigManager, MessagePrefixProvider messagePrefixProvider) {
         this.sender = EmailNotificationSenderFactory.create(appConfigManager);
         this.recipientMail = appConfigManager.getSettingValue(Settings.MAIL_RECIPIENT_EMAIL);
         this.subject = appConfigManager.getSettingValue(Settings.MAIL_SUBJECT);
+        this.messagePrefixProvider = messagePrefixProvider;
     }
 
     /**
@@ -53,9 +55,11 @@ public class EmailSenderAdapter implements MessageSender{
      */
     @Override
     public void sendMessage(String msg) {
+        String fullMessage = messagePrefixProvider.getMessagePrefix() + msg;
+
         sender.ifPresent(s -> {
             if (recipientMail != null && !recipientMail.isBlank()) {
-                s.sendMessageAsync(msg, subject, recipientMail)
+                s.sendMessageAsync(fullMessage, subject, recipientMail)
                         .whenComplete((response, throwable) -> {
                             if (throwable != null) {
                                 log.error("Failed to send Email message.", throwable);
