@@ -5,11 +5,17 @@ import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * The class represents a timer waiting for the second file event.
- * Sends notifications when the timer expires.
+ * A reusable timer that executes a given task (TimerTask) after a specified delay.
+ * <p>
+ * The timer can be configured for a single execution or for a limited number of repeated executions.
+ * After the timer is stopped (either by completing its work or by a manual call to {@link #stop()}),
+ * it can be started again with the same or new settings.
+ * <p>
+ * Note: This implementation is based on {@link java.util.Timer}.
  */
 public class FileEventTimer {
 
+    private final TimerTask timerTask;
     private Timer timer;
 
     /**
@@ -40,7 +46,7 @@ public class FileEventTimer {
     /**
      * Indicates whether the timer is running.
      */
-    private boolean isRunning = false;
+    private volatile boolean isRunning = false;
 
     /**
      * Creates a new timer with the specified duration.
@@ -48,13 +54,18 @@ public class FileEventTimer {
      * @param duration timer duration, cannot be a negative number.
      * @throws IllegalArgumentException if the duration is less than zero.
      */
-    public FileEventTimer(long duration) {
+    public FileEventTimer(TimerTask timerTask, long duration) {
         if (duration < 0) throw new IllegalArgumentException("Duration cannot be negative");
         this.duration = duration;
+        this.timerTask = timerTask;
     }
 
     /**
-     * Starting the timer according to the settings
+     * Starts the timer.
+     * <p>
+     * A new internal {@link Timer} instance is created on each call, allowing the timer to be reused
+     * after it has been stopped. The timer will execute the task either once or repeatedly,
+     * based on the settings provided via {@link #setRepeatNotifications(long, int)}.
      *
      * @throws IllegalStateException if the timer is already running.
      */
@@ -62,35 +73,46 @@ public class FileEventTimer {
         if (isRunning) throw new IllegalStateException("Timer is already running!"); //check that the timer cannot be started twice
         isRunning = true;
         this.timer = new Timer(); //for reuse, each time the method is run a new timer is created
-        TimerTask timerTask = new TimerTask() {
-            @Override
-            public void run() {
-                sendNotifications();
-            }
-        };
-        if (enableNotificationRepeat) {
-            timer.schedule(timerTask, duration, period);
-        } else {
-            timer.schedule(timerTask, duration);
-        }
-    }
 
-    private void sendNotifications() {
-        if (counter.getAndIncrement() < iterations) {
-            System.out.println("сообщение"); // высылаем сообщения
-            //расширение логики
+        if (enableNotificationRepeat) {
+            counter.set(0); // Resetting the counter every time we start
+            TimerTask wrapperTask = new TimerTask() {
+                @Override
+                public void run() {
+                    try {
+                        timerTask.run();
+                    } finally {
+                        // Repetition logic processing
+                        if (counter.incrementAndGet() >= iterations) {
+                            stop(); // Stop the timer when the limit is reached
+                        }
+                    }
+                }
+            };
+            timer.schedule(wrapperTask, duration, period);
         } else {
-            stop();
+            TimerTask singleShotWrapper = new TimerTask() {
+                @Override
+                public void run() {
+                    try {
+                        timerTask.run();
+                    } finally {
+                        isRunning = false;
+                    }
+                }
+            };
+            timer.schedule(singleShotWrapper, duration);
         }
     }
 
     /**
-     * Enables repeated notifications when the timer expires.
+     * Configures the timer for repeated executions.
+     * If this method is not called, the timer will execute the task only once.
      *
-     * @param period time period between repeated alerts, milliseconds, cannot be less than or equal to zero.
-     * @param iterations number of repeated alerts, cannot be less than or equal to zero.
-     * @throws IllegalArgumentException if long period and int iterations less than or equal to zero.
-     * @throws IllegalStateException if the timer is already running.
+     * @param period     the time in milliseconds between subsequent task executions. Must be greater than zero.
+     * @param iterations the total number of times the task should be executed. Must be greater than zero.
+     * @throws IllegalArgumentException if period or iterations are not positive numbers.
+     * @throws IllegalStateException    if the timer is already running and its settings cannot be changed.
      */
     public void setRepeatNotifications(long period, int iterations) {
         if (isRunning) throw new IllegalStateException("Cannot change repeat settings while the timer is running!");
@@ -101,7 +123,10 @@ public class FileEventTimer {
     }
 
     /**
-     * Stops the timer.
+     * Forcibly stops the timer, canceling all scheduled tasks.
+     * <p>
+     * This method resets the timer's internal state, making it ready to be started again
+     * via the {@link #start()} method.
      */
     public void stop() {
         if (timer != null) timer.cancel();
