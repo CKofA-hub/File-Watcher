@@ -10,8 +10,9 @@ import java.util.Objects;
  * The extension is defined as the part of the file name after the last dot ('.').
  * Files without a dot, where the dot is the first character (e.g., ".bashrc"),
  * or where the dot is the last character (e.g., "file.") are considered to have no extension.
- * This matcher returns {@code true} if the given {@link Path} points to a regular file
- * and its extension matches the one provided in the constructor.
+ * <p>
+ * Providing an empty string ("") to the constructor will create a matcher that
+ * specifically looks for files without an extension.
  */
 public final class FileExtensionPathMatcher implements PathMatcher {
 
@@ -19,13 +20,13 @@ public final class FileExtensionPathMatcher implements PathMatcher {
 
     /**
      * Creates a new instance of {@code FileExtensionPathMatcher}.
-     * The extension can be provided with or without a leading dot.
      *
-     * @param extension the file extension to match against. Must not be null or empty.
+     * @param extension the file extension to match against. Cannot be null or contain only whitespace.
+     *                  An empty string is allowed for matching files without an extension.
      */
     public FileExtensionPathMatcher(String extension) {
-        if (extension == null || extension.isBlank()) {
-            throw new IllegalArgumentException("File extension cannot be null or empty.");
+        if (extension == null || (extension.isBlank() && !extension.isEmpty())) {
+            throw new IllegalArgumentException("File extension cannot be null or contain only whitespace.");
         }
         // Store the extension without the leading dot, if it exists.
         // This is more robust than contains().
