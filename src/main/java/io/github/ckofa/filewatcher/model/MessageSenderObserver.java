@@ -41,11 +41,12 @@ public class MessageSenderObserver implements WatchEventObserver {
      * @return a formatted string describing the event.
      */
     private String constructMessage(CustomWatchEvent watchEvent) {
-        Path watchPath = watchEvent.getWatchPath();
+        Path watchPath = watchEvent.watchPath();
 
-        String objectName = watchEvent.getWatchEvent().context().toString();
+        WatchEvent<?> originalWatchEvent = watchEvent.watchEvent();
+        String objectName = originalWatchEvent.context().toString();
 
-        WatchEvent.Kind<?> eventKind = watchEvent.getWatchEvent().kind();
+        WatchEvent.Kind<?> eventKind = originalWatchEvent.kind();
 
         String eventTypeObject;
         String wasVerb;
@@ -77,7 +78,7 @@ public class MessageSenderObserver implements WatchEventObserver {
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String formattedTime = watchEvent.getEventTime().format(formatter);
+        String formattedTime = watchEvent.eventTime().format(formatter);
 
         return String.format("%s %s в папке %s %s %s. Время события: %s",
                 eventTypeObject,

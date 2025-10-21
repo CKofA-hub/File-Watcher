@@ -41,9 +41,9 @@ class MessageSenderObserverTest {
     @BeforeEach
     void setUp() {
         messageSenderObserver = new MessageSenderObserver(messageManager);
-        when(watchEvent.getWatchPath()).thenReturn(tempDir);
-        when(watchEvent.getEventTime()).thenReturn(eventTime);
-        doReturn(nestedWatchEvent).when(watchEvent).getWatchEvent();
+        when(watchEvent.watchPath()).thenReturn(tempDir);
+        when(watchEvent.eventTime()).thenReturn(eventTime);
+        doReturn(nestedWatchEvent).when(watchEvent).watchEvent();
     }
 
     private void setupEvent(String name, WatchEvent.Kind<?> kind, boolean isDirectory) throws IOException {

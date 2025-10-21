@@ -5,5 +5,6 @@ module org.home.CKofA {
     requires telegram.bot.api;
     requires okhttp3;
     requires jakarta.mail;
+    requires annotations;
     exports io.github.ckofa.filewatcher;
 }
