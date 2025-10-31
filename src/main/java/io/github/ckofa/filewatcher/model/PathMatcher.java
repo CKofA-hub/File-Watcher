@@ -17,4 +17,11 @@ public interface PathMatcher {
      * @return {@code true} if the path matches the condition, {@code false} otherwise.
      */
     boolean matches(Path path);
+
+    /**
+     * Returns a human-readable description of the matcher's pattern.
+     *
+     * @return The description string.
+     */
+    String getDescription();
 }

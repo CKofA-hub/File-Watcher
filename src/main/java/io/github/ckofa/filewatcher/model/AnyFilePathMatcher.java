@@ -29,4 +29,9 @@ public final class AnyFilePathMatcher implements PathMatcher {
         Objects.requireNonNull(path, "Path cannot be null");
         return Files.isRegularFile(path);
     }
+
+    @Override
+    public String getDescription() {
+        return "file: 'any'";
+    }
 }

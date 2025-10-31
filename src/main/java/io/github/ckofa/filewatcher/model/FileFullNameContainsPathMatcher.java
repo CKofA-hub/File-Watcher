@@ -44,4 +44,9 @@ public final class FileFullNameContainsPathMatcher implements PathMatcher {
         String fileName = path.getFileName().toString();
         return fileName.contains(this.namePart);
     }
+
+    @Override
+    public String getDescription() {
+        return String.format("file: nameContains='%s'", this.namePart);
+    }
 }

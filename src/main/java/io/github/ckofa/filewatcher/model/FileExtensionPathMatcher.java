@@ -59,4 +59,9 @@ public final class FileExtensionPathMatcher implements PathMatcher {
 
         return actualExtension.equals(this.extension);
     }
+
+    @Override
+    public String getDescription() {
+        return String.format("file: fileExtension='%s'", this.extension);
+    }
 }

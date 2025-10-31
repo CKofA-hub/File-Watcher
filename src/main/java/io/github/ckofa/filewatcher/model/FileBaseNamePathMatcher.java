@@ -57,4 +57,10 @@ public final class FileBaseNamePathMatcher implements PathMatcher {
 
         return actualBaseName.equals(this.baseName);
     }
+
+    @Override
+    public String getDescription() {
+        return String.format("file: baseName='%s'", this.baseName);
+    }
+
 }

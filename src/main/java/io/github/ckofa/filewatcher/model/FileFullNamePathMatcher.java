@@ -38,4 +38,9 @@ public final class FileFullNamePathMatcher implements PathMatcher {
 
         return Files.isRegularFile(path) && fullName.equals(path.getFileName().toString());
     }
+
+    @Override
+    public String getDescription() {
+        return String.format("file: fullName='%s'", this.fullName);
+    }
 }
