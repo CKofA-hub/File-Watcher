@@ -3,18 +3,45 @@ package io.github.ckofa.filewatcher.model;
 import jakarta.mail.*;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A class for sending email notifications via the SMTP protocol. It supports both synchronous and asynchronous sending
  * for public email services (e.g., Gmail, Yahoo) and intra-corporate mail (without domain authentication and SSL).
  * Resources are managed via a customizable thread pool.
+ * <p>
+ * <b>Important:</b> To ensure proper resource cleanup and allow the application to exit gracefully,
+ * the {@link #shutdown()} method <b>must always be called</b> when the sender is no longer needed.
+ * Failure to do so will prevent the Java Virtual Machine (JVM) from exiting, as the internal
+ * thread pool will remain active. It is highly recommended to use a {@code try-finally} block
+ * to guarantee that {@code shutdown()} is invoked.
+ * </p>
+ * <pre>{@code
+ * EmailNotificationSender sender = null;
+ * try {
+ *     sender = EmailNotificationSender.createPublicEmailNotificationSender(
+ *         "user@gmail.com", "password", "smtp.gmail.com", 587
+ *     );
+ *     sender.sendMessageAsync("Hello", "Test Subject", "recipient@example.com");
+ *     // ... more operations ...
+ * } finally {
+ *     if (sender != null) {
+ *         System.out.println("Shutting down email sender...");
+ *         sender.shutdown();
+ *     }
+ * }
+ * }</pre>
  */
 public final class EmailNotificationSender {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailNotificationSender.class);
 
     /**
      * Callback interface for handling the result of asynchronous email sending operations.
@@ -191,13 +218,17 @@ public final class EmailNotificationSender {
      * Waits up to 10 seconds for tasks to complete before forcing termination.
      */
     public void shutdown() {
+        log.info("Shutting down email sender executor service...");
         executor.shutdown();
         try {
-            if (!executor.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                log.warn("Email sender tasks did not terminate in 10 seconds, forcing shutdown.");
                 executor.shutdownNow();
             }
         } catch (InterruptedException e) {
+            log.warn("Shutdown of email sender was interrupted. Forcing shutdown now.");
             executor.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 
