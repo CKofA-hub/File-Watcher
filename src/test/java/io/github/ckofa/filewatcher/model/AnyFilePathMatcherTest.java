@@ -69,4 +69,17 @@ class AnyFilePathMatcherTest {
                 "Path cannot be null"
         );
     }
+
+    @Test
+    @DisplayName("Should return a correct human-readable description")
+    void getDescription_shouldReturnCorrect() {
+        // Arrange
+        String expectedDescription = "file: 'any'";
+
+        // Act
+        String actualDescription = matcher.getDescription();
+
+        // Assert
+        assertEquals(expectedDescription, actualDescription);
+    }
 }

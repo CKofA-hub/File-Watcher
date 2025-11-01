@@ -119,5 +119,19 @@ class FileFullNameContainsPathMatcherTest {
         assertEquals("Path cannot be null", exception.getMessage());
     }
 
+    @Test
+    @DisplayName("Should return a correct human-readable description")
+    void getDescription_shouldReturnCorrect() {
+        // Arrange
+        String partName = "document";
+        PathMatcher pathMatcher = new FileFullNameContainsPathMatcher(partName);
+        String expectedDescription = String.format("file: nameContains='%s'", partName);
+
+        // Act
+        String actualDescription = pathMatcher.getDescription();
+
+        //Assert
+        assertEquals(expectedDescription, actualDescription);
+    }
 
 }

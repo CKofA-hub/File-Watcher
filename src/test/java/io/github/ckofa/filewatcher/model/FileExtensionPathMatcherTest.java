@@ -135,4 +135,19 @@ class FileExtensionPathMatcherTest {
         assertEquals("Path cannot be null", exception.getMessage());
     }
 
+    @Test
+    @DisplayName("Should return a correct human-readable description")
+    void getDescription_shouldReturnCorrect() {
+        // Arrange
+        String extension = "txt";
+        PathMatcher pathMatcher = new FileExtensionPathMatcher(extension);
+        String expectedDescription = String.format("file: fileExtension='%s'", extension);
+
+        // Act
+        String actualDescription = pathMatcher.getDescription();
+
+        //Assert
+        assertEquals(expectedDescription, actualDescription);
+    }
+
 }
